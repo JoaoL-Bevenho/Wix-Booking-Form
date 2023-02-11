@@ -1,0 +1,195 @@
+// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
+// “Hello, World!” Example: https://learn-code.wix.com/en/article/1-hello-world
+import wixData from 'wix-data';
+import wixLocation from 'wix-location';
+import {getJSON} from "wix-fetch";
+
+var rowId=0;
+let timeOptions = new Array("10:00", "10:15", "10:30", "10:45",
+                           "11:00", "11:15", "11:30", "11:45",
+                           "12:00", "12:15", "12:30", "12:45",
+                           "13:00", "13:15", "13:30", "13:45",
+                           "14:00", "14:15", "14:30", "14:45",
+                           "15:00", "15:15", "15:30", "15:45",
+                           "16:00", "16:15", "16:30", "16:45",
+                           "17:00", "17:15", "17:30", "17:45",
+                           "18:00", "18:15", "18:30", "18:45",
+                           "19:00", "19:15");
+
+$w.onReady(function () {
+   let bookingTableRowsArray = $w("#bookingTable").rows;
+   $w("#container1").hide();
+   console.log($w("#bookingTable").rows);
+
+});
+
+export function table1_rowSelect(event, $w) {
+   //Add your code for this event here:
+   let rowData = event.rowData;
+   rowId = rowData._id;
+   $w("#fullName").value = rowData.fullName;
+   $w("#phoneNumber").value = rowData.phoneNumber;
+   $w("#partyPicker").value = rowData.partyPicker;
+   $w("#partyOccasion").value = rowData.partyOccasion;
+   $w("#postCode").value = rowData.postCode;
+   $w("#address").value = rowData.address;
+   $w("#townCityDistrict").value = rowData.townCityDistrict;
+   $w("#county").value = rowData.county;
+   $w("#chosenDate").value = new Date(rowData.partyDate);
+   $w("#startTime").value = rowData.startTime;
+   $w("#endTime").value = rowData.endTime;
+   $w("#whatsappLink").link = "https://api.whatsapp.com/send/?phone=" +$w("#phoneNumber").value;
+   let fullNameArray = $w("#fullName").value.split(" ");
+   
+   let chosenDateArray = $w("#chosenDate").value.toDateString().split(" ");
+
+   let startTimeArray = $w("#startTime").value.split(":");
+
+   let startTimeHour = startTimeArray[0];
+   let startTimeMinute = (startTimeArray[1] -30).toString();
+   if(startTimeMinute == "-30") {
+      startTimeHour -= 1;
+      startTimeMinute = "30";
+   }
+   if(startTimeMinute == "-15") {
+      startTimeHour -= 1;
+      startTimeMinute = "45";
+   }
+   if(startTimeMinute == "0") {
+      startTimeMinute = "00";
+   }
+   if(startTimeHour<10) {
+      let newHour = "0" + startTimeHour.toString();
+      startTimeHour = newHour;
+   }
+
+   $w("#confirm").link = "https://api.whatsapp.com/send/?phone=" +$w("#phoneNumber").value+ "&text=Hi " +fullNameArray[0]+", I can confirm that we have booked you in for " +chosenDateArray[0]+" "+chosenDateArray[1]+" "+chosenDateArray[2]+" "+chosenDateArray[3]
+   + " at " +startTimeArray[0]+":"+startTimeArray[1]+ " for the " +$w("#partyPicker").value+ ". I will look to arrive at " +startTimeHour+":"+startTimeMinute+ " in order to set up. If you have any questions regarding your entertainment please feel free to contact"
+   + " me on WhatsApp and I'll get back to you ASAP. Many thanks and I look forward to meeting you on " +chosenDateArray[0]+" "+chosenDateArray[1]+" "+chosenDateArray[2]+" "+chosenDateArray[3]+ ". The address informed is " +$w("#address").value+ ", is that correct?";
+
+   $w("#cancel").link = "https://api.whatsapp.com/send/?phone=" +$w("#phoneNumber").value+ "&text=Hi " +fullNameArray[0]+ ", thanks for your booking enquiry - I'm afraid we're not currently able to serve in your area at the moment. Perhaps we will serve in your"
+   + " area in the future!";
+   const postCodeSurreyValidate = /^[a-zA-Z0-9]/g;
+   const regexTest = postCodeSurreyValidate.test($w("#postCode").value);
+	if (regexTest == true) {
+		getJSON("https://api.postcodes.io/postcodes/" + $w("#postCode").value, {"method": "get"})
+		.then( jsonResponse => {
+         $w("#maps").link = "http://maps.google.com/?q=" +$w("#address").value+ ",+" +jsonResponse.result.parish+ "+" +$w("#postCode").value+ ",+UK";
+         $w("#townCityDistrict").value = jsonResponse.result.admin_district;
+		});
+	}
+}
+
+export function startTime_focus(event, $w) {
+   $w("#endTime").value = "";
+}
+
+export function startTime_blur(event, $w) {
+   let startTimeArray = $w("#startTime").value.split(":");
+   let startTimeHour = startTimeArray[0];
+   const startTimeMinute = startTimeArray[1].toString();
+   var newStartTimeHour = "";
+   var newStartTimeMinute = "";
+   var newEndTimeHour = "";
+   var newEndTimeMinute = "";
+   if (startTimeMinute == "00") {
+      newStartTimeMinute = "45";
+      newStartTimeHour = startTimeHour.toString();
+      newEndTimeHour = (parseInt(startTimeHour)+1).toString();
+      newEndTimeMinute = "30";
+   }
+   else if (startTimeMinute == "15") {
+      newStartTimeMinute = "00";
+      const newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+1).toString();
+      newEndTimeMinute = "45";
+   }
+   else if (startTimeMinute == "30") {
+      newStartTimeMinute = "15";
+      const newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+2).toString();
+      newEndTimeMinute = "00";
+   }
+   else if (startTimeMinute == "45") {
+      newStartTimeMinute = "30";
+      var newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+2).toString();
+      newEndTimeMinute = "15";
+   }
+	$w("#endTime").enabledTimes = [
+      {startTime: newStartTimeHour + ":" + newStartTimeMinute, endTime: newEndTimeHour + ":" + newEndTimeMinute}
+   ];
+}
+export function confirm_click(event) {
+	let updatedBooking = {
+      "partyOccasion": $w("#partyOccasion").value,
+      "startTime": $w("#startTime").value,
+      "phoneNumber": $w("#phoneNumber").value,
+      "postCode": $w("#postCode").value,
+      "_id": rowId,
+      "bookingStatus": "CONFIRMED",
+      "partyPicker": $w("#partyPicker").value,
+      "fullName": $w("#fullName").value,
+      "county": $w("#county").value,
+      "endTime": $w("#endTime").value,
+      "address": $w("#address").value,
+      "townCityDistrict": $w("#townCityDistrict").value,
+      "partyDate": $w("#chosenDate").value,
+   };
+	wixData.update("BookingForm", updatedBooking);
+}
+
+export function reschedule_click(event) {
+   let updatedBooking = {
+      "partyOccasion": $w("#partyOccasion").value,
+      "startTime": $w("#startTime").value,
+      "phoneNumber": $w("#phoneNumber").value,
+      "postCode": $w("#postCode").value,
+      "_id": rowId,
+      "bookingStatus": "RESCHEDULED",
+      "partyPicker": $w("#partyPicker").value,
+      "fullName": $w("#fullName").value,
+      "county": $w("#county").value,
+      "endTime": $w("#endTime").value,
+      "address": $w("#address").value,
+      "townCityDistrict": $w("#townCityDistrict").value,
+      "partyDate": $w("#chosenDate").value,
+   };
+	wixData.update("BookingForm", updatedBooking);
+   wixLocation.to("https://www.tophatkids.com/account/bookings");
+}
+
+export function cancel_click(event) {
+	let updatedBooking = {
+      "partyOccasion": $w("#partyOccasion").value,
+      "startTime": $w("#startTime").value,
+      "phoneNumber": $w("#phoneNumber").value,
+      "postCode": $w("#postCode").value,
+      "_id": rowId,
+      "bookingStatus": "CANCELLED",
+      "partyPicker": $w("#partyPicker").value,
+      "fullName": $w("#fullName").value,
+      "county": $w("#county").value,
+      "endTime": $w("#endTime").value,
+      "address": $w("#address").value,
+      "townCityDistrict": $w("#townCityDistrict").value,
+      "partyDate": $w("#chosenDate").value,
+   };
+	wixData.update("BookingForm", updatedBooking); 
+}
+
+export function travelTime_click(event,$w) {
+   console.log($w("#bookingTable").rows);
+   let bookings = $w("#bookingTable").rows;
+   for(var i=0; i < bookings.length;i++) {
+      if(rowId == bookings[0]._id) { console.log("NO DIRECTIONS TO NOWHERE, NIGGER") }
+      else if(rowId == bookings[i]._id){
+         $w("#travelTime").link = "https://www.google.com/maps/dir/"+$w("#address").value+ ",+" + $w("#townCityDistrict").value + "+" + $w("#postCode").value + ",+UK/"
+         + bookings[i-1].address + ",+" + bookings[i-1].townCityDistrict + "+" + bookings[i-1].postCode + ",+UK/";
+      }
+   }
+}
+

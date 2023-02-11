@@ -1,0 +1,300 @@
+// API Reference: https://www.wix.com/velo/reference/api-overview/introduction
+// “Hello, World!” Example: https://learn-code.wix.com/en/article/1-hello-world
+import wixData from 'wix-data';
+import wixLocation from 'wix-location';
+import {getJSON} from "wix-fetch";
+
+let timeOptions = new Array("10:00", "10:15", "10:30", "10:45",
+                           "11:00", "11:15", "11:30", "11:45",
+                           "12:00", "12:15", "12:30", "12:45",
+                           "13:00", "13:15", "13:30", "13:45",
+                           "14:00", "14:15", "14:30", "14:45",
+                           "15:00", "15:15", "15:30", "15:45",
+                           "16:00", "16:15", "16:30", "16:45",
+                           "17:00", "17:15", "17:30", "17:45",
+                           "18:00", "18:15", "18:30", "18:45",
+                           "19:00", "19:15");
+
+$w.onReady( function() {
+   $w("#postcodeError").hide();
+   $w("#endTime").hide();
+   getDateTimes();
+});
+
+export function postCode_blur(event) {
+   if($w("#postCode").value != "") {
+      const postCode = $w("#postCode").value.toUpperCase();
+      const id = "#postCode";
+      validatePostCode(postCode, id);   
+   }
+}
+
+function validatePostCode(postCode, id) {
+   const postCodeSurreyValidate = /^[a-zA-Z0-9]/g;
+   const districtArray = new Array("Spelthorne", "Runnymede", "Surrey Heath", "Woking", "Elmbridge", "Guildford", "Waverley", "Mole Valley", "Epsom and Ewell", "Reigate and Banstead",
+   "Tandridge", "Ealing", "Hounslow", "Richmond upon Thames", "Kingston upon Thames", "Merton", "Sutton", "Croydon", "Hillingdon");
+   const regexTest = postCodeSurreyValidate.test(postCode);
+   if (regexTest == true) {
+      getJSON("https://api.postcodes.io/postcodes/" + postCode, {"method": "get"})
+      .then( jsonResponse => {
+         if(jsonResponse.status != "200"){
+            $w(id).value = "";
+            setTimeout(function() {
+               $w(id).focus(); 
+            }, 0);
+            $w("#postcodeError").show();
+            $w("#postcodeError").text = jsonResponse.error.toUpperCase();
+            setTimeout(function() {
+               $w("#postcodeError").hide(); 
+            }, 3000);
+         }
+         else {
+            let i=0;
+            const postcodeCheck = new Array();
+            for(i; i < districtArray.length; i++) {
+               if(jsonResponse.result.admin_district != districtArray[i]) { postcodeCheck[i] = "0"; }
+               else { postcodeCheck[i] = "1"; }
+            }
+            for(i=0;i<postcodeCheck.length; i++) {
+               if(postcodeCheck[i] == "1") {
+                  $w("#townCityDistrict").value = jsonResponse.result.admin_district;
+                  $w("#townCityDistrict").focus();
+                  $w("#county").value = jsonResponse.result.admin_county;
+                  $w("#county").focus();
+               }
+            }
+         }
+         $w("#address").focus();
+      })
+      .catch(err => {
+         const error = "Postcode service offline, please fill out address information manually"
+         $w("#postcodeError").show();
+         $w("#postcodeError").text = error.toUpperCase();
+         setTimeout(function() {
+            $w("#postcodeError").hide("fade"); 
+         }, 3000);
+      });
+   }
+}
+
+export function startTime_focus(event) {
+   $w("#endTime").value = "";
+   $w("#endTime").show();
+}
+
+export function startTime_blur(event, $w) {
+   let currentTime = $w('#startTime').value;
+   let hour = Number(currentTime.substr(0,2));
+   let minute = Number(currentTime.substr(3,2));
+   let newDate = $w('#datePicker').value;
+   newDate.setHours(hour);
+   newDate.setMinutes(minute);
+
+   let startTimeArray = $w("#startTime").value.split(":");
+   let startTimeHour = startTimeArray[0];
+   const startTimeMinute = startTimeArray[1].toString();
+   var newStartTimeHour = "";
+   var newStartTimeMinute = "";
+   var newEndTimeHour = "";
+   var newEndTimeMinute = "";
+   if (startTimeMinute == "00") {
+      newStartTimeMinute = "45";
+      newStartTimeHour = startTimeHour.toString();
+      newEndTimeHour = (parseInt(startTimeHour)+1).toString();
+      newEndTimeMinute = "30";
+      }
+      else if (startTimeMinute == "15") {
+      newStartTimeMinute = "00";
+      const newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+1).toString();
+      newEndTimeMinute = "45";
+      }
+      else if (startTimeMinute == "30") {
+      newStartTimeMinute = "15";
+      const newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+2).toString();
+      newEndTimeMinute = "00";
+      }
+      else if (startTimeMinute == "45") {
+      newStartTimeMinute = "30";
+      var newNewStartHour = (parseInt(startTimeHour)+1).toString();
+      newStartTimeHour = newNewStartHour;
+      newEndTimeHour = (parseInt(startTimeHour)+2).toString();
+      newEndTimeMinute = "15";
+      }
+   $w("#endTime").enabledTimes = [
+      {startTime: newStartTimeHour + ":" + newStartTimeMinute, endTime: newEndTimeHour + ":" + newEndTimeMinute}
+   ];
+}
+
+export function buttonSubmit_click(event) {
+   if(
+   $w("#fullName").value == "" || 
+   $w("#phoneNumber").value == "" || 
+   $w("#partyPicker").value == "" || 
+   $w("#partyOccasion").value == "" || 
+   $w("#postCode").value == "" || 
+   $w("#address").value == "" || 
+   $w("#townCityDistrict").value == "" || 
+   $w("#county").value == "" ||
+   $w("#startTime").value == "" || 
+   $w("#endTime").value == "") {
+      setTimeout(function() {
+         $w("#submitError").show(); 
+      }, 750);
+      setTimeout(function() {
+         $w("#submitError").hide("fade"); 
+      }, 3000);
+   }
+   else {
+      let newBooking = {
+         "partyOccasion": $w("#partyOccasion").value,
+         "startTime": $w("#startTime").value,
+         "phoneNumber": $w("#phoneNumber").value,
+         "postCode": $w("#postCode").value,
+         "bookingStatus": "CONFIRMED",
+         "partyPicker": $w("#partyPicker").value,
+         "fullName": $w("#fullName").value,
+         "county": $w("#county").value,
+         "endTime": $w("#endTime").value,
+         "address": $w("#address").value,
+         "townCityDistrict": $w("#townCityDistrict").value,
+         "partyDate": $w("#datePicker").value,
+      };
+      wixData.save("BookingForm", newBooking);
+      setTimeout(function() {
+         $w("#fullName").value = "";
+         $w("#phoneNumber").value = "";
+         $w("#partyPicker").value = "";
+         $w("#partyOccasion").value = "";
+         $w("#postCode").value = "";
+         $w("#address").value = "";
+         $w("#townCityDistrict").value = "";
+         $w("#county").value = "";
+         $w("#datePicker").value = new Date();
+         $w("#startTime").value = "";
+         $w("#endTime").value = "";
+         $w("#submitSuccess").show(); 
+      }, 750);
+      setTimeout(function() {
+         $w("#submitSuccess").hide("fade"); 
+      }, 1500);
+      setTimeout(function() {
+         wixLocation.to("https://www.tophatkids.com/book-online");
+      }, 1000);
+   }
+}
+
+function getDateTimes() {
+   const monthArray = new Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+   const monthCheck = new Array();
+   let bookingsArray;
+   
+   let startTimesArray = [];
+   let endTimesArray = [];
+
+   let partyDateConverted = [];
+   let partyDateSplit = "";
+
+   var finalStartTimesArray = [];
+   var finalEndTimesArray = [];
+   var splitStartTimes = [];
+   var splitEndTimes = [];
+
+   let dateTimesArray = [];
+   let finalDateTimesArray = [];
+   wixData.query("BookingForm")
+   .eq("bookingStatus", null)
+   .or(
+      wixData.query("BookingForm")
+      .eq("bookingStatus", "RESCHEDULED")
+      .or(
+         wixData.query("BookingForm")
+         .eq("bookingStatus", "CONFIRMED")
+      )
+   )
+   .ascending("partyDate", "startTime")
+   .limit(150)
+   .find()
+   .then((results) => {
+        bookingsArray = results.items;
+      var i=0;
+      var j=0;
+      var todaysDate = new Date();
+      for(i;i<bookingsArray.length;i++) {
+         if(bookingsArray[i].bookingStatus != "CANCELLED") {
+            partyDateSplit = bookingsArray[i].partyDate.toString().split(" ");
+            for(j;j<monthArray.length;j++) {
+               if(partyDateSplit[1] != monthArray[j]) { monthCheck[j] = "0"; }
+               else { monthCheck[j] = "1";}
+            }
+            for(j=0;j<monthCheck.length;j++) {
+               if(monthCheck[j] == "1") {
+               partyDateConverted[i] = partyDateSplit[2] + "-" + (j+1).toString() + "-" + partyDateSplit[3]; }
+            }
+
+            startTimesArray.push(bookingsArray[i].startTime);
+            endTimesArray.push(bookingsArray[i].endTime);
+         }
+      }
+      
+      for(i=0;i<startTimesArray.length;i++) {
+         splitStartTimes = startTimesArray[i].toString().split(":");
+         splitEndTimes = endTimesArray[i].toString().split(":");
+         finalStartTimesArray[i] = splitStartTimes[0] + ":" + splitStartTimes[1];
+         finalEndTimesArray[i] = splitEndTimes[0] + ":" + splitEndTimes[1]; 
+      }
+
+      //Joins the time interval and date of each respective 
+      for(i=0;i<partyDateConverted.length;i++) { dateTimesArray[i] = new Array(partyDateConverted[i], new Array(finalStartTimesArray[i], finalEndTimesArray[i])); }
+
+      //filters the dates, leaving only individual dates
+      let uniqueDates = [...new Set(partyDateConverted)];
+
+      //formats the individual dates into an array
+      for(i=0;i<uniqueDates.length;i++) { finalDateTimesArray[i] = new Array(uniqueDates[i], new Array()); }
+
+      //puts the intervals in each respective date array
+      for(i=0;i<dateTimesArray.length;i++) {
+         for(j=0;j<finalDateTimesArray.length;j++) {
+            if(dateTimesArray[i][0] == finalDateTimesArray[j][0]) {
+               if(finalDateTimesArray[j][1] == ""){
+                  finalDateTimesArray[j][1] = dateTimesArray[i][1];
+               }
+               else {
+                  finalDateTimesArray[j].push(dateTimesArray[i][1]);
+               }
+               
+            }
+         }
+      }
+      console.log(finalStartTimesArray);
+      console.log(finalEndTimesArray);
+      console.log(dateTimesArray);
+      console.log(finalDateTimesArray);
+      //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      //this part is intended to make the calculations for available slots
+      let availableDateTimes = [];
+      let startTimeSplit, endTimeSplit;
+      let startTimeInt, endTimeInt;
+      for(i=0;i<finalDateTimesArray.length;i++) {
+         availableDateTimes[i] = new Array(finalDateTimesArray[i][0], new Array());
+         for(j=0;j<finalDateTimesArray[i].length;j++) {
+            if(j!=0) {
+               if(j!=1) {
+               }
+               else {
+                  startTimeSplit = finalDateTimesArray[i][j][0].split(":");
+                  startTimeInt = parseInt(startTimeSplit[0] + startTimeSplit[1]);
+                  console.log("FIRST TIME FOR " + finalDateTimesArray[i][0] + " : " + startTimeSplit[0] + startTimeSplit[1]);
+               }
+            }
+         }
+      }
+   });
+
+}
